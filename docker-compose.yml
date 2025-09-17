@@ -1,0 +1,19 @@
+version: "3.8"
+services:
+  gavhar:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_PATH=./data/database.sqlite
+      - UPLOAD_PATH=./uploads
+      - FRONTEND_URL=http://81.162.55.13
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=gavhar2024
+      - BACKUP_ENABLED=true
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    restart: unless-stopped
