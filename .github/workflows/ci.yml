@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Generate images (best-effort)
+        run: npm run images:generate
+        continue-on-error: true
+
+      - name: Update version (best-effort)
+        run: npm run update-version
+        continue-on-error: true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gavhar-build
+          if-no-files-found: warn
+          path: |
+            public/**/*.min.*
+            public/offline.html
+            public/FONT/*.woff2
+            ecosystem.config.js
+            package.json
+            package-lock.json
+
+
+
+
+
