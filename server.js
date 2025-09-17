@@ -10,6 +10,7 @@ const compression = require('compression');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const isProduction = process.env.NODE_ENV === 'production';
 app.set('etag', 'strong');
 
 // Ensure required directories exist (data/uploads)
@@ -52,7 +53,6 @@ app.use(cors({
 }));
 
 // Rate limiting (enabled only in production)
-const isProduction = process.env.NODE_ENV === 'production';
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 600, // per-IP limit (tune as needed for production)
