@@ -14,7 +14,7 @@ fi
 
 ssh -o StrictHostKeyChecking=no "$REMOTE" bash -s <<'EOS'
 set -euo pipefail
-REPO_URL="https://github.com/Alex2516439780/GavharMenu.git"
+REPO_URL="https://github.com/Alex2516439780/GavharMenu-2.git"
 APP_DIR="${1:-/opt/gavhar}"
 
 if [[ ! -d "$APP_DIR" ]]; then
