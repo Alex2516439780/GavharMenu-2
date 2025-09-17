@@ -1,0 +1,24 @@
+# Node
+node_modules/
+logs/
+*.log
+npm-debug.log*
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Caches / temp
+.tmp/
+.cache/
+coverage/
+
+# Misc
+*.pid
