@@ -1,7 +1,9 @@
 version: "3.8"
+
 services:
   gavhar:
     build: .
+    container_name: gavhar-menu
     ports:
       - "3000:3000"
     environment:
@@ -9,11 +11,35 @@ services:
       - PORT=3000
       - DB_PATH=./data/database.sqlite
       - UPLOAD_PATH=./uploads
-      - FRONTEND_URL=http://81.162.55.13
-      - ADMIN_USERNAME=admin
-      - ADMIN_PASSWORD=gavhar2024
-      - BACKUP_ENABLED=true
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-gavhar2024}
+      - BACKUP_ENABLED=${BACKUP_ENABLED:-true}
     volumes:
       - ./data:/app/data
       - ./uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./backups:/app/backups
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx reverse proxy (опционально)
+  nginx:
+    image: nginx:alpine
+    container_name: gavhar-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - gavhar
+    restart: unless-stopped
+    profiles:
+      - nginx

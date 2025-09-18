@@ -47,7 +47,15 @@
 ├── api.js                  # REST API структура
 ├── README.md               # Документация проекта
 ├── API_DOCUMENTATION.md    # Документация API
+├── DEPLOY_VPS.md           # Инструкция по развертыванию на VPS
+├── QUICK_START.md          # Быстрый старт
 ├── ТЗ                      # Техническое задание
+├── deploy-github.sh        # Скрипт развертывания (PM2)
+├── deploy-docker.sh        # Скрипт развертывания (Docker)
+├── init-git.sh             # Скрипт инициализации Git
+├── docker-compose.yml      # Docker Compose конфигурация
+├── nginx.conf              # Nginx конфигурация для Docker
+├── env.example             # Пример переменных окружения
 └── ELEMENTS/               # Графические элементы
     ├── Gavhar logo-02 1.png
     ├── Group 41.png
@@ -57,13 +65,49 @@
 
 ## 🛠 Установка и запуск
 
+### Локальная разработка
+
 1. **Скачайте все файлы** в одну папку
 2. **Откройте `index.html`** в браузере для просмотра меню
 3. **Откройте `admin.html`** для доступа к админ-панели
 
+### Развертывание на VPS сервере
+
+#### 🚀 Быстрый старт (3 шага)
+
+1. **Загрузите код в GitHub:**
+
+```bash
+chmod +x init-git.sh
+./init-git.sh https://github.com/your-username/gavhar-menu.git "Initial commit"
+```
+
+2. **Подготовьте VPS сервер:**
+
+```bash
+ssh root@your-server-ip
+adduser gavhar && usermod -aG sudo gavhar
+su - gavhar
+```
+
+3. **Запустите развертывание:**
+
+```bash
+# Docker (рекомендуется)
+curl -fsSL https://raw.githubusercontent.com/your-username/gavhar-menu/main/deploy-docker.sh | bash -s -- https://github.com/your-username/gavhar-menu.git yourdomain.com main
+
+# Или прямое развертывание
+curl -fsSL https://raw.githubusercontent.com/your-username/gavhar-menu/main/deploy-github.sh | bash -s -- https://github.com/your-username/gavhar-menu.git yourdomain.com main
+```
+
+#### 📋 Подробная инструкция
+
+Смотрите [DEPLOY_VPS.md](DEPLOY_VPS.md) для полной инструкции по развертыванию.
+
 ### Доступ к админ-панели
 
-- **URL**: `admin.html`
+- **Локально**: `admin.html`
+- **На сервере**: `https://yourdomain.com/admin`
 - **Пароль**: `gavhar2024`
 
 ## 🎨 Дизайн
