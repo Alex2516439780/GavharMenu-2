@@ -5,7 +5,7 @@ module.exports = {
     FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000',
 
     // Database
-    DB_PATH: process.env.DB_PATH || './database.sqlite',
+    DB_PATH: process.env.DB_PATH || './data/database.sqlite',
 
     // JWT Secret
     JWT_SECRET: process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production',

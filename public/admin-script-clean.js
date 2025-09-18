@@ -1264,7 +1264,7 @@ async function toggleDishStatus(dishId) {
         if (response.success) {
             showSuccess(`Блюдо ${response.data.inStock ? 'показано' : 'скрыто'}`);
             loadDishes();
-    } else {
+        } else {
             throw new Error(response.error || 'Ошибка изменения статуса');
         }
     } catch (error) {

@@ -529,12 +529,23 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
 router.patch('/:id/toggle-status', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
+        console.log(`Переключение статуса блюда ID: ${id}`);
+
+        // Валидация ID
+        if (!id || isNaN(parseInt(id))) {
+            return res.status(400).json({
+                success: false,
+                error: 'Неверный ID блюда'
+            });
+        }
 
         // Получение текущего статуса
         const dish = await database.get(
-            'SELECT in_stock FROM dishes WHERE id = ?',
+            'SELECT id, in_stock FROM dishes WHERE id = ?',
             [id]
         );
+
+        console.log('Найденное блюдо:', dish);
 
         if (!dish) {
             return res.status(404).json({
@@ -545,10 +556,14 @@ router.patch('/:id/toggle-status', authenticateToken, requireAdmin, async (req, 
 
         // Переключение статуса
         const newStatus = dish.in_stock ? 0 : 1;
-        await database.run(
+        console.log(`Изменение статуса с ${dish.in_stock} на ${newStatus}`);
+
+        const result = await database.run(
             'UPDATE dishes SET in_stock = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
             [newStatus, id]
         );
+
+        console.log('Результат обновления:', result);
 
         res.json({
             success: true,
@@ -558,6 +573,11 @@ router.patch('/:id/toggle-status', authenticateToken, requireAdmin, async (req, 
 
     } catch (error) {
         console.error('Ошибка переключения статуса блюда:', error);
+        console.error('Детали ошибки:', {
+            message: error.message,
+            stack: error.stack,
+            id: req.params.id
+        });
         res.status(500).json({
             success: false,
             error: 'Ошибка переключения статуса блюда'

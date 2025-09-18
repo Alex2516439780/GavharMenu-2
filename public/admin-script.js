@@ -100,7 +100,10 @@ async function apiRequest(endpoint, options = {}) {
     }
 
     if (!response.ok) {
-        throw new Error((data && data.error) || `HTTP error! status: ${response.status}`);
+        const error = new Error((data && data.error) || `HTTP error! status: ${response.status}`);
+        error.status = response.status;
+        error.response = data;
+        throw error;
     }
 
     return data;
@@ -417,7 +420,24 @@ async function toggleDishStatus(dishId, buttonEl) {
             statusBadge.textContent = !wasInactive ? 'В наличии' : 'Нет в наличии';
         }
         console.error('Error toggling dish status:', error);
-        showError('Ошибка изменения статуса: ' + error.message);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            dishId: dishId,
+            wasInactive: wasInactive
+        });
+
+        // Более детальное сообщение об ошибке
+        let errorMessage = 'Ошибка изменения статуса';
+        if (error.message) {
+            errorMessage += ': ' + error.message;
+        } else if (error.status) {
+            errorMessage += ` (HTTP ${error.status})`;
+        } else {
+            errorMessage += ': Неизвестная ошибка';
+        }
+
+        showError(errorMessage);
     }
 }
 

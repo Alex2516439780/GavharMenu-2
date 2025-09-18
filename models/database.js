@@ -9,27 +9,52 @@ class Database {
 
     async init() {
         return new Promise((resolve, reject) => {
-            this.db = new sqlite3.Database(config.DB_PATH, (err) => {
+            this.db = new sqlite3.Database(config.DB_PATH, async (err) => {
                 if (err) {
                     console.error('Ошибка подключения к базе данных:', err.message);
                     reject(err);
                 } else {
                     console.log('✅ Подключение к базе данных установлено');
-                    this.setPragmas()
-                        .then(() => this.createTables())
-                        .then(() => this.createIndices())
-                        .then(() => this.createFts())
-                        .then(() => this.optimize())
-                        .then(resolve)
-                        .catch(reject);
+                    try {
+                        // Проверяем целостность БД
+                        await this.checkIntegrity();
+                        await this.setPragmas();
+                        await this.createTables();
+                        await this.createIndices();
+                        await this.createFts();
+                        await this.optimize();
+                        resolve();
+                    } catch (error) {
+                        reject(error);
+                    }
                 }
             });
         });
     }
 
+    async checkIntegrity() {
+        try {
+            const result = await this.get('PRAGMA integrity_check;');
+            if (result && result.integrity_check !== 'ok') {
+                console.warn('⚠️ Обнаружено повреждение БД при проверке целостности');
+                await this.recoverDatabase();
+            }
+        } catch (error) {
+            if (error.code === 'SQLITE_CORRUPT') {
+                console.warn('⚠️ БД повреждена, восстанавливаю...');
+                await this.recoverDatabase();
+            } else {
+                throw error;
+            }
+        }
+    }
+
     async setPragmas() {
+        const isWindows = process.platform === 'win32';
+        const journalMode = isWindows ? 'DELETE' : 'WAL';
         const pragmas = [
-            'PRAGMA journal_mode=WAL;',
+            `PRAGMA journal_mode=${journalMode};`,
+            'PRAGMA foreign_keys=ON;',
             'PRAGMA synchronous=NORMAL;',
             'PRAGMA temp_store=MEMORY;',
             'PRAGMA cache_size=-20000;',
@@ -215,11 +240,31 @@ class Database {
         );
     }
 
-    run(sql, params = []) {
+    async run(sql, params = []) {
         return new Promise((resolve, reject) => {
-            this.db.run(sql, params, function(err) {
+            this.db.run(sql, params, async (err) => {
                 if (err) {
-                    reject(err);
+                    // Если ошибка SQLITE_CORRUPT, попробуем восстановить БД
+                    if (err.code === 'SQLITE_CORRUPT') {
+                        console.warn('⚠️ Обнаружено повреждение БД, пытаюсь восстановить...');
+                        try {
+                            await this.recoverDatabase();
+                            // Повторяем запрос после восстановления
+                            this.db.run(sql, params, (retryErr) => {
+                                if (retryErr) {
+                                    console.error('❌ Ошибка после восстановления БД:', retryErr.message);
+                                    reject(retryErr);
+                                } else {
+                                    resolve({ id: this.lastID, changes: this.changes });
+                                }
+                            });
+                        } catch (recoverErr) {
+                            console.error('❌ Не удалось восстановить БД:', recoverErr.message);
+                            reject(err);
+                        }
+                    } else {
+                        reject(err);
+                    }
                 } else {
                     resolve({ id: this.lastID, changes: this.changes });
                 }
@@ -249,6 +294,55 @@ class Database {
                 }
             });
         });
+    }
+
+    async recoverDatabase() {
+        const fs = require('fs');
+        const path = require('path');
+
+        try {
+            // Закрываем текущее соединение
+            await this.close();
+
+            const dbPath = config.DB_PATH;
+            const backupDir = path.join(__dirname, '..', 'backups');
+            const dataDir = path.dirname(dbPath);
+
+            // Ищем самый свежий бэкап
+            let latestBackup = null;
+            if (fs.existsSync(backupDir)) {
+                const backups = fs.readdirSync(backupDir)
+                    .filter(f => f.endsWith('.sqlite'))
+                    .map(f => ({
+                        name: f,
+                        path: path.join(backupDir, f),
+                        time: fs.statSync(path.join(backupDir, f)).mtime.getTime()
+                    }))
+                    .sort((a, b) => b.time - a.time);
+
+                if (backups.length > 0) {
+                    latestBackup = backups[0];
+                }
+            }
+
+            if (latestBackup) {
+                console.log(`🔄 Восстанавливаю БД из бэкапа: ${latestBackup.name}`);
+                fs.copyFileSync(latestBackup.path, dbPath);
+            } else {
+                console.log('⚠️ Бэкапы не найдены, создаю новую БД');
+                if (fs.existsSync(dbPath)) {
+                    fs.unlinkSync(dbPath);
+                }
+            }
+
+            // Пересоздаем соединение
+            await this.init();
+            console.log('✅ БД восстановлена и переподключена');
+
+        } catch (error) {
+            console.error('❌ Ошибка восстановления БД:', error.message);
+            throw error;
+        }
     }
 
     close() {
