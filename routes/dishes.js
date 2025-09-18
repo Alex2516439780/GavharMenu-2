@@ -102,7 +102,11 @@ router.get('/', async (req, res) => {
         const processedDishes = dishes.map(dish => {
             const base = {
                 id: dish.id,
-                name: { ru: dish.name_ru, uz: dish.name_uz, en: dish.name_en },
+                name: { 
+                    ru: dish.name_ru || '', 
+                    uz: dish.name_uz || '', 
+                    en: dish.name_en || '' 
+                },
                 category: dish.category_key,
                 subcategory: dish.subcategory_key,
                 price: dish.price,
@@ -111,9 +115,9 @@ router.get('/', async (req, res) => {
                 inStock: Boolean(dish.in_stock),
                 isAlcoholic: Boolean(dish.is_alcoholic),
                 categoryName: {
-                    ru: dish.category_name_ru,
-                    uz: dish.category_name_uz,
-                    en: dish.category_name_en
+                    ru: dish.category_name_ru || '',
+                    uz: dish.category_name_uz || '',
+                    en: dish.category_name_en || ''
                 }
             };
 
@@ -188,9 +192,9 @@ router.get('/:id(\\d+)', async (req, res) => {
             data: {
                 id: dish.id,
                 name: {
-                    ru: dish.name_ru,
-                    uz: dish.name_uz,
-                    en: dish.name_en
+                    ru: dish.name_ru || '',
+                    uz: dish.name_uz || '',
+                    en: dish.name_en || ''
                 },
                 category: dish.category_key,
                 subcategory: dish.subcategory_key,
@@ -208,9 +212,9 @@ router.get('/:id(\\d+)', async (req, res) => {
                 inStock: Boolean(dish.in_stock),
                 isAlcoholic: Boolean(dish.is_alcoholic),
                 categoryName: {
-                    ru: dish.category_name_ru,
-                    uz: dish.category_name_uz,
-                    en: dish.category_name_en
+                    ru: dish.category_name_ru || '',
+                    uz: dish.category_name_uz || '',
+                    en: dish.category_name_en || ''
                 }
             }
         });
@@ -312,9 +316,9 @@ router.get('/search', async (req, res) => {
             return {
                 id: dish.id,
                 name: {
-                    ru: dish.name_ru,
-                    uz: dish.name_uz,
-                    en: dish.name_en
+                    ru: dish.name_ru || '',
+                    uz: dish.name_uz || '',
+                    en: dish.name_en || ''
                 },
                 category: dish.category_key,
                 subcategory: dish.subcategory_key,
@@ -332,9 +336,9 @@ router.get('/search', async (req, res) => {
                 inStock: Boolean(dish.in_stock),
                 isAlcoholic: Boolean(dish.is_alcoholic),
                 categoryName: {
-                    ru: dish.category_name_ru,
-                    uz: dish.category_name_uz,
-                    en: dish.category_name_en
+                    ru: dish.category_name_ru || '',
+                    uz: dish.category_name_uz || '',
+                    en: dish.category_name_en || ''
                 }
             };
         });
@@ -447,6 +451,22 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
             isAlcoholic
         } = req.body;
 
+        console.log('Обновление блюда ID:', id);
+        console.log('Данные для обновления:', {
+            name,
+            category,
+            subcategory,
+            price,
+            order,
+            image,
+            images,
+            composition,
+            weight,
+            cookingTime,
+            inStock,
+            isAlcoholic
+        });
+
         // Проверка существования блюда
         const existingDish = await database.get(
             'SELECT id FROM dishes WHERE id = ?',
@@ -461,20 +481,26 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
         }
 
         // Обновление блюда
-        await database.run(
+        const updateParams = [
+            name.ru, name.uz, name.en, category, subcategory, price, order,
+            image, JSON.stringify(images || []), composition?.ru || '',
+            composition?.uz || '', composition?.en || '', weight || '',
+            cookingTime || '', inStock ? 1 : 0, isAlcoholic ? 1 : 0, id
+        ];
+
+        console.log('Параметры для обновления:', updateParams);
+
+        const result = await database.run(
             `UPDATE dishes SET
                 name_ru = ?, name_uz = ?, name_en = ?, category_key = ?, subcategory_key = ?,
                 price = ?, order_index = ?, image = ?, images = ?, composition_ru = ?,
                 composition_uz = ?, composition_en = ?, weight = ?, cooking_time = ?,
                 in_stock = ?, is_alcoholic = ?, updated_at = CURRENT_TIMESTAMP
              WHERE id = ?`,
-            [
-                name.ru, name.uz, name.en, category, subcategory, price, order,
-                image, JSON.stringify(images || []), composition?.ru || '',
-                composition?.uz || '', composition?.en || '', weight || '',
-                cookingTime || '', inStock ? 1 : 0, isAlcoholic ? 1 : 0, id
-            ]
+            updateParams
         );
+
+        console.log('Результат обновления:', result);
 
         res.json({
             success: true,
